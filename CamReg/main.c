@@ -14,6 +14,7 @@
 
 #include <pi_regulator.h>
 #include <process_image.h>
+#include <manage_distance.h>
 
 void SendUint8ToComputer(uint8_t* data, uint16_t size) 
 {
