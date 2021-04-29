@@ -9,100 +9,60 @@
 #include <process_image.h>
 
 
-static float distance_cm = 0;
-static uint16_t line_position = IMAGE_BUFFER_SIZE/2;	//middle
+static char color_image = 'n';
 
 //semaphore
 static BSEMAPHORE_DECL(image_ready_sem, TRUE);
 
+
+
 /*
- *  Returns the line's width extracted from the image buffer given
- *  Returns 0 if line not found
+ *  Returns color of the image
+ *  r = red ; b = blue ; g = green ; n = no color
  */
-uint16_t extract_line_width(uint8_t *buffer){
+char extract_image_color(uint8_t *buffer){
+	char color;
 
-	uint16_t i = 0, begin = 0, end = 0, width = 0;
-	uint8_t stop = 0, wrong_line = 0, line_not_found = 0;
-	uint32_t mean = 0;
+	uint32_t red_mean = 0;
+	uint32_t green_mean = 0;
+	uint32_t blue_mean = 0;
+	uint32_t total_mean = 0;
 
-	static uint16_t last_width = PXTOCM/GOAL_DISTANCE;
+	uint8_t value_test = 30;
 
-	//performs an average
-	for(uint16_t i = 0 ; i < IMAGE_BUFFER_SIZE ; i++){
-		mean += buffer[i];
-	}
-	mean /= IMAGE_BUFFER_SIZE;
-
-	do{
-		wrong_line = 0;
-		//search for a begin
-		while(stop == 0 && i < (IMAGE_BUFFER_SIZE - WIDTH_SLOPE))
-		{
-			//the slope must at least be WIDTH_SLOPE wide and is compared
-		    //to the mean of the image
-		    if(buffer[i] > mean && buffer[i+WIDTH_SLOPE] < mean)
-		    {
-		        begin = i;
-		        stop = 1;
-		    }
-		    i++;
-		}
-		//if a begin was found, search for an end
-		if (i < (IMAGE_BUFFER_SIZE - WIDTH_SLOPE) && begin)
-		{
-		    stop = 0;
-
-		    while(stop == 0 && i < IMAGE_BUFFER_SIZE)
-		    {
-		        if(buffer[i] > mean && buffer[i-WIDTH_SLOPE] < mean)
-		        {
-		            end = i;
-		            stop = 1;
-		        }
-		        i++;
-		    }
-		    //if an end was not found
-		    if (i > IMAGE_BUFFER_SIZE || !end)
-		    {
-		        line_not_found = 1;
-		    }
-		}
-		else//if no begin was found
-		{
-		    line_not_found = 1;
-		}
-
-		//if a line too small has been detected, continues the search
-		if(!line_not_found && (end-begin) < MIN_LINE_WIDTH){
-			i = end;
-			begin = 0;
-			end = 0;
-			stop = 0;
-			wrong_line = 1;
-		}
-	}while(wrong_line);
-
-	if(line_not_found){
-		begin = 0;
-		end = 0;
-		width = last_width;
-	}else{
-		last_width = width = (end - begin);
-		line_position = (begin + end)/2; //gives the line position.
+	for (uint16_t i = 0; i < (IMAGE_BUFFER_SIZE) ; i++){
+		red_mean += buffer[3*i];
+		green_mean += buffer[3*i+1];
+		blue_mean += buffer[3*i+2];
 	}
 
-	//sets a maximum width or returns the measured width
-	if((PXTOCM/width) > MAX_DISTANCE){
-		return PXTOCM/MAX_DISTANCE;
-	}else{
-		return width;
-	}
+
+	red_mean /= IMAGE_BUFFER_SIZE;
+	green_mean /= IMAGE_BUFFER_SIZE;
+	blue_mean /= IMAGE_BUFFER_SIZE;
+
+	total_mean = (red_mean + green_mean + blue_mean)/3 ;
+
+	if ((red_mean > total_mean + value_test) && (blue_mean < total_mean) && (green_mean < total_mean)) // function test for color determination
+		return color = 'r';
+
+	if ((green_mean > total_mean + value_test) && (blue_mean < total_mean) && (red_mean < total_mean))
+		return color = 'g';
+
+	if ((blue_mean > total_mean + value_test) && (red_mean < total_mean) && (green_mean < total_mean))
+		return color = 'b';
+
+	return color = 'n';
+
 }
+
+
+
 
 static THD_WORKING_AREA(waCaptureImage, 256);
 static THD_FUNCTION(CaptureImage, arg) {
 
-    chRegSetThreadName(__FUNCTION__);
+    chRegSetThreadName(_FUNCTION_);
     (void)arg;
 
 	//Takes pixels 0 to IMAGE_BUFFER_SIZE of the line 10 + 11 (minimum 2 lines because reasons)
@@ -125,52 +85,68 @@ static THD_FUNCTION(CaptureImage, arg) {
 static THD_WORKING_AREA(waProcessImage, 1024);
 static THD_FUNCTION(ProcessImage, arg) {
 
-    chRegSetThreadName(__FUNCTION__);
+    chRegSetThreadName(_FUNCTION_);
     (void)arg;
 
 	uint8_t *img_buff_ptr;
-	uint8_t image[IMAGE_BUFFER_SIZE] = {0};
-	uint16_t lineWidth = 0;
+	uint8_t image[3*IMAGE_BUFFER_SIZE] = {0};
 
+
+	/*CORRECTION CODE
+	uint16_t lineWidth = 0;
 	bool send_to_computer = true;
+	 */
+
 
     while(1){
     	//waits until an image has been captured
         chBSemWait(&image_ready_sem);
 		//gets the pointer to the array filled with the last image in RGB565    
-		img_buff_ptr = dcmi_get_last_image_ptr();
+		img_buff_ptr = dcmi_get_last_image_ptr(); // this function is
 
-		//Extracts only the red pixels
-		for(uint16_t i = 0 ; i < (2 * IMAGE_BUFFER_SIZE) ; i+=2){
-			//extracts first 5bits of the first byte
-			//takes nothing from the second byte
-			image[i/2] = (uint8_t)img_buff_ptr[i]&0xF8;
+		//Extracts all color pixel
+		for(uint16_t i = 0 ; i < (IMAGE_BUFFER_SIZE) ; i++){
+
+			//extracts first 5bits of the first byte to have only red
+			//the result is shifted to have a value at the start of the bytes
+			image[3*i] = ((uint8_t)img_buff_ptr[i]&0xF8)>>3;
+
+
+			//extract green and place it in image, (green is in between two buffer we have some bit manipulation)
+			image[3*i +1] = ((uint8_t)img_buff_ptr[i]&0x07)<<3 || ((uint8_t)img_buff_ptr[i+1]&0xE0)>>5;
+
+
+			//extracts first 5bits of the second byte to have only blue
+			image[3*i +2] = ((uint8_t)img_buff_ptr[i+1]&0x1F);
+
 		}
 
-		//search for a line in the image and gets its width in pixels
-		lineWidth = extract_line_width(image);
 
+		color_image = extract_image_color(image);
 		//converts the width into a distance between the robot and the camera
-		if(lineWidth){
-			distance_cm = PXTOCM/lineWidth;
-		}
 
+
+
+		/* CORRECTION CODE
 		if(send_to_computer){
 			//sends to the computer the image
 			SendUint8ToComputer(image, IMAGE_BUFFER_SIZE);
 		}
 		//invert the bool
 		send_to_computer = !send_to_computer;
+		*/
     }
 }
 
-float get_distance_cm(void){
-	return distance_cm;
+
+
+char get_color(void){
+	return color_image;
 }
 
-uint16_t get_line_position(void){
-	return line_position;
-}
+
+
+
 
 void process_image_start(void){
 	chThdCreateStatic(waProcessImage, sizeof(waProcessImage), NORMALPRIO, ProcessImage, NULL);
