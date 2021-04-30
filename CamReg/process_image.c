@@ -62,7 +62,6 @@ char extract_image_color(uint8_t *buffer){
 static THD_WORKING_AREA(waCaptureImage, 256);
 static THD_FUNCTION(CaptureImage, arg) {
 
-    chRegSetThreadName(_FUNCTION_);
     (void)arg;
 
 	//Takes pixels 0 to IMAGE_BUFFER_SIZE of the line 10 + 11 (minimum 2 lines because reasons)
@@ -85,7 +84,6 @@ static THD_FUNCTION(CaptureImage, arg) {
 static THD_WORKING_AREA(waProcessImage, 1024);
 static THD_FUNCTION(ProcessImage, arg) {
 
-    chRegSetThreadName(_FUNCTION_);
     (void)arg;
 
 	uint8_t *img_buff_ptr;
@@ -113,7 +111,7 @@ static THD_FUNCTION(ProcessImage, arg) {
 
 
 			//extract green and place it in image, (green is in between two buffer we have some bit manipulation)
-			image[3*i +1] = ((uint8_t)img_buff_ptr[i]&0x07)<<3 || ((uint8_t)img_buff_ptr[i+1]&0xE0)>>5;
+			image[3*i +1] = ((uint8_t)img_buff_ptr[i]&0x07)<<3 | ((uint8_t)img_buff_ptr[i+1]&0xE0)>>5;
 
 
 			//extracts first 5bits of the second byte to have only blue

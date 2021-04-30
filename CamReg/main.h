@@ -8,7 +8,7 @@ extern "C" {
 #include "camera/dcmi_camera.h"
 #include "msgbus/messagebus.h"
 #include "parameter/parameter.h"
-
+#include <sensors/proximity.h>
 
 //constants for the differents parts of the project
 #define IMAGE_BUFFER_SIZE		640

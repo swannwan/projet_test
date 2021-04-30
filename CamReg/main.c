@@ -15,6 +15,7 @@
 #include <pi_regulator.h>
 #include <process_image.h>
 #include <manage_distance.h>
+#include <sensors/proximity.h>
 
 void SendUint8ToComputer(uint8_t* data, uint16_t size) 
 {
@@ -35,6 +36,11 @@ static void serial_start(void)
 	sdStart(&SD3, &ser_cfg); // UART3.
 }
 
+messagebus_t bus;
+MUTEX_DECL(bus_lock);
+CONDVAR_DECL(bus_condvar);
+
+
 int main(void)
 {
 
@@ -47,14 +53,20 @@ int main(void)
     //start the USB communication
     usb_start();
     //starts the camera
-    dcmi_start();
-	po8030_start();
+    //dcmi_start();     UNCOMMENT
+	//po8030_start();		UNCOMMENT
 	//inits the motors
 	motors_init();
 
 	//stars the threads for the pi regulator and the processing of the image
-	pi_regulator_start();
-	process_image_start();
+	messagebus_init(&bus, &bus_lock, &bus_condvar);
+
+	proximity_start();
+	manage_distance_start();
+
+
+	//pi_regulator_start();	UNCOMMENT
+	//process_image_start(); UNCOMMENT
 
     /* Infinite loop. */
     while (1) {
