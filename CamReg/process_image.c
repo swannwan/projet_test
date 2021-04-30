@@ -114,12 +114,16 @@ static THD_FUNCTION(ProcessImage, arg) {
 			image[3*i] = ((uint8_t)img_buff_ptr[i]&0xF8)>>3;
 			//extract green and place it in image, (green is in between two buffer we have some bit manipulation)
 <<<<<<< HEAD
+<<<<<<< HEAD
 			image[3*i +1] = ((uint8_t)img_buff_ptr[i]&0x07)<<3 | ((uint8_t)img_buff_ptr[i+1]&0xE0)>>5;
 
 
 =======
 			image[3*i +1] = (((uint8_t)img_buff_ptr[i]&0x07)<<3) | (((uint8_t)img_buff_ptr[i+1]&0xE0)>>5);
 >>>>>>> 2127a5a (comit bite)
+=======
+			image[3*i +1] = (((uint8_t)img_buff_ptr[i]&0x07)<<3) | (((uint8_t)img_buff_ptr[i+1]&0xE0)>>5);
+>>>>>>> origin/robin
 			//extracts first 5bits of the second byte to have only blue
 			image[3*i +2] = ((uint8_t)img_buff_ptr[i+1]&0x1F);
 		}
