@@ -30,10 +30,5 @@
 			<type>2</type>
 			<locationURI>PARENT-2-PROJECT_LOC/lib/e-puck2_main-processor</locationURI>
 		</link>
-		<link>
-			<name>lib</name>
-			<type>2</type>
-			<location>C:/Users/swann/Desktop/lib</location>
-		</link>
 	</linkedResources>
 </projectDescription>

@@ -50,23 +50,28 @@ int main(void)
 
     //starts the serial communication
     serial_start();
+
     //start the USB communication
     usb_start();
+
     //starts the camera
-    //dcmi_start();     UNCOMMENT
-	//po8030_start();		UNCOMMENT
-	//inits the motors
+    dcmi_start();
+	po8030_start();
+
+	//initialize the motors
 	motors_init();
 
 	//stars the threads for the pi regulator and the processing of the image
 	messagebus_init(&bus, &bus_lock, &bus_condvar);
 
+
+	process_image_start(); //UNCOMMENT
 	proximity_start();
+
 	manage_distance_start();
 
-
 	//pi_regulator_start();	UNCOMMENT
-	//process_image_start(); UNCOMMENT
+
 
     /* Infinite loop. */
     while (1) {

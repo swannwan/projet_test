@@ -5,7 +5,7 @@
 
 //**** add for project
 
-char get_color(void);
+int16_t get_color(void);
 
 
 //****

@@ -10,8 +10,18 @@ extern "C" {
 #include "parameter/parameter.h"
 #include <sensors/proximity.h>
 
-//constants for the differents parts of the project
+//constants for the difFerents parts of the project
 #define IMAGE_BUFFER_SIZE		640
+#define ROBOT_SPEED				400
+
+// COLOR USED FOR THE GAME THE NUMBER CORRESPEND TO THE ANGLE SHIFT THAT THERE WILL BE
+#define RED_CARD				-40 // LA BALLE VA ETRE STOPPER DANS SON REBOND
+#define GREEN_CARD				40	// LA BALLE LONGE PLUS LA SURFACE
+#define BLUE_CARD				100
+#define BLACK_CARD				0
+
+
+
 
 /*
 #define WIDTH_SLOPE				5

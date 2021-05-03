@@ -12,22 +12,22 @@
 #include <process_image.h>
 
 
-static char color_image = 'n';
+
 
 //semaphore
 static BSEMAPHORE_DECL(image_ready_sem, TRUE);
 
 
+static int16_t color_image = 0;
 
-/*
- *  Returns color of the image
- *  r = red ; b = blue ; g = green ; n = no color
- */
+ // Returns color of the image
+ // r = red ; b = blue ; g = green ; n = no color
 
 
-char extract_image_color(uint8_t *buffer){
-	char color;
 
+int16_t extract_image_color(uint8_t *buffer){
+
+	int16_t color;
 	uint32_t red_mean = 0;
 	uint32_t green_mean = 0;
 	uint32_t blue_mean = 0;
@@ -49,17 +49,18 @@ char extract_image_color(uint8_t *buffer){
 	total_mean = (red_mean + green_mean + blue_mean)/3 ;
 
 	if ((red_mean > total_mean + value_test) && (blue_mean < total_mean) && (green_mean < total_mean)) // function test for color determination
-		return color = 'r';
+		return color = RED_CARD;
 
 	if ((green_mean > total_mean + value_test) && (blue_mean < total_mean) && (red_mean < total_mean))
-		return color = 'g';
+		return color = GREEN_CARD;
 
 	if ((blue_mean > total_mean + value_test) && (red_mean < total_mean) && (green_mean < total_mean))
-		return color = 'b';
+		return color = BLUE_CARD;
 
-	return color = 'n';
+	return color = BLACK_CARD;
 
 }
+
 
 
 
@@ -95,10 +96,7 @@ static THD_FUNCTION(ProcessImage, arg) {
 	uint8_t image[3*IMAGE_BUFFER_SIZE] = {0};
 
 
-	/*CORRECTION CODE
-	uint16_t lineWidth = 0;
-	bool send_to_computer = true;
-	 */
+
 
 
     while(1){
@@ -110,28 +108,19 @@ static THD_FUNCTION(ProcessImage, arg) {
 		//Extracts all color pixel
 		for(uint16_t i = 0 ; i < (IMAGE_BUFFER_SIZE) ; i++){
 			//extracts first 5bits of the first byte to have only red
+
 			//the result is shifted to have a value at the start of the bytes
 			image[3*i] = ((uint8_t)img_buff_ptr[i]&0xF8)>>3;
+
 			//extract green and place it in image, (green is in between two buffer we have some bit manipulation)
-<<<<<<< HEAD
-<<<<<<< HEAD
 			image[3*i +1] = ((uint8_t)img_buff_ptr[i]&0x07)<<3 | ((uint8_t)img_buff_ptr[i+1]&0xE0)>>5;
 
-
-=======
-			image[3*i +1] = (((uint8_t)img_buff_ptr[i]&0x07)<<3) | (((uint8_t)img_buff_ptr[i+1]&0xE0)>>5);
->>>>>>> 2127a5a (comit bite)
-=======
-			image[3*i +1] = (((uint8_t)img_buff_ptr[i]&0x07)<<3) | (((uint8_t)img_buff_ptr[i+1]&0xE0)>>5);
->>>>>>> origin/robin
 			//extracts first 5bits of the second byte to have only blue
 			image[3*i +2] = ((uint8_t)img_buff_ptr[i+1]&0x1F);
 		}
 
 		color_image = extract_image_color(image);
 		//converts the width into a distance between the robot and the camera
-
-
 
 		/* CORRECTION CODE
 		if(send_to_computer){
@@ -144,7 +133,7 @@ static THD_FUNCTION(ProcessImage, arg) {
     }
 }
 
-char get_color(void){
+int16_t get_color(void){
 	return color_image;
 }
 
