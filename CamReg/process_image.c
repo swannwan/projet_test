@@ -18,7 +18,7 @@
 static BSEMAPHORE_DECL(image_ready_sem, TRUE);
 
 
-static int16_t color_image = 0;
+static int16_t color_image = BLACK_CARD;
 
  // Returns color of the image
  // r = red ; b = blue ; g = green ; n = no color
@@ -33,7 +33,7 @@ int16_t extract_image_color(uint8_t *buffer){
 	uint32_t blue_mean = 0;
 	uint32_t total_mean = 0;
 
-	uint8_t value_test = 30;
+	uint32_t value_test = 30;
 
 	for (uint16_t i = 0; i < (IMAGE_BUFFER_SIZE) ; i++){
 		red_mean += buffer[3*i];
@@ -87,7 +87,7 @@ static THD_FUNCTION(CaptureImage, arg) {
 }
 
 
-static THD_WORKING_AREA(waProcessImage, 1024);
+static THD_WORKING_AREA(waProcessImage, 4096);
 static THD_FUNCTION(ProcessImage, arg) {
 
     (void)arg;
@@ -120,6 +120,9 @@ static THD_FUNCTION(ProcessImage, arg) {
 		}
 
 		color_image = extract_image_color(image);
+
+		//chprintf((BaseSequentialStream *)&SDU1, "COLOR=%d\n", color_image); UNCOMMENT
+
 		//converts the width into a distance between the robot and the camera
 
 		/* CORRECTION CODE

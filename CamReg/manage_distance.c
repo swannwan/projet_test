@@ -13,17 +13,17 @@
 #include <main.h>
 #include <process_image.h>
 
-#define DISTANCE_LIM 				200
+#define DISTANCE_LIM 				500
 
-#define DISTANCE_LIM_FRNT_SENSOR 	100 // VALUE TO CALIBRATE EXPERIMENTALY
+#define DISTANCE_LIM_FRNT_SENSOR 	480 // VALUE TO CALIBRATE EXPERIMENTALY
 
 #define MOTOR_STEP_DELTA 			20
-#define MOTOR_STEP_COMPLET_ROTATION	1100
+#define MOTOR_STEP_COMPLET_ROTATION	1300
 // constant declaration **************************************************
 
 
 
-static int16_t angle_to_camera[8] = {5, 30, 90, 130, -130, -90, -30, -5} ; // IN MOTOR STEP CA SERAIT MIEUX IL FAUT LE TROUVER EXPERIMENTALEMENT
+static int16_t angle_to_camera[8] = {-5, -30, -90, -130, 130, 90, 30, 5} ; // IN MOTOR STEP CA SERAIT MIEUX IL FAUT LE TROUVER EXPERIMENTALEMENT
 
 
 
@@ -48,7 +48,7 @@ int16_t alert_proximity_sensor(void)
 {
 	for (int i = 0 ; i < 8 ; i++)
 	{
-		if (get_prox(i) > DISTANCE_LIM && (i != 3 || i !=4)) // NE PREND QUE LES CAPTEURS DE DEVANT
+		if (get_prox(i) > DISTANCE_LIM && i != 3 && i !=4) // NE PREND QUE LES CAPTEURS DE DEVANT
 			return angle_to_camera[i];
 	}
 	return 0;
@@ -110,12 +110,12 @@ void rotate_robot(int16_t left_motor_step)
 	if (rotation_clockwise)
 	{
 		while (left_motor_get_pos() < left_motor_step){
-			chThdSleep(5);
+			chThdSleepMilliseconds(10);
 		}
 	}else
 	{
 		while (left_motor_get_pos() < - left_motor_step){
-			chThdSleep(5);
+			chThdSleepMilliseconds(10);
 		}
 	}
 //	stop the robot after making the rotation
@@ -146,9 +146,11 @@ void rotate_robot_until_align (int16_t angle)
 	}
 
 	//	get motor position in uint32 so we need angle in uint32
-	while (get_prox(0) < DISTANCE_LIM_FRNT_SENSOR  && get_prox(7) < DISTANCE_LIM_FRNT_SENSOR )
+	while (get_prox(0) < DISTANCE_LIM_FRNT_SENSOR  || get_prox(7) < DISTANCE_LIM_FRNT_SENSOR)
+	//while (get_prox(0) < DISTANCE_LIM_FRNT_SENSOR)
 	{
-		chThdSleep(5);
+		//chprintf((BaseSequentialStream *)&SDU1, "captureprox=%d\n", get_prox(0));
+		chThdSleepMilliseconds(10);
 	}
 
 	left_motor_step_to_align = left_motor_get_pos();
@@ -203,7 +205,7 @@ void rotate_robot_bounce(void)
 //}
 
 
-static THD_WORKING_AREA(waManageDistance, 256);
+static THD_WORKING_AREA(waManageDistance, 1024);
 static THD_FUNCTION(ManageDistance, arg) {
 
     chRegSetThreadName(__FUNCTION__);
@@ -218,15 +220,15 @@ static THD_FUNCTION(ManageDistance, arg) {
     	if (alert_proximity_sensor()) // alert proximity return an angle
     	{
     		rotate_robot_until_align(alert_proximity_sensor());
-    		color = get_color();
-    		// ON A MTN LE SENS DE LA ROTATION, LA COULEUR DE LA CARTE, ET LES MOTORS STEP POUR L'ANGLE AVEC LE MUR
-    		//	ON DOIT FAIRE UNE FONCTION QUI CALCULE UN NOUVELLE ANGLE DE ROTATION (EN MOTOR STEP) ET QUI ROTATE LE ROBOT JUSQU'A CELUI CI
-    		rotate_robot_bounce();
-
-    		start_robot();
-
+    		//color = get_color();
+    		//    		// ON A MTN LE SENS DE LA ROTATION, LA COULEUR DE LA CARTE, ET LES MOTORS STEP POUR L'ANGLE AVEC LE MUR
+    		//    		//	ON DOIT FAIRE UNE FONCTION QUI CALCULE UN NOUVELLE ANGLE DE ROTATION (EN MOTOR STEP) ET QUI ROTATE LE ROBOT JUSQU'A CELUI CI
+    		//rotate_robot_bounce();
+    		//
+    		//start_robot();
     	}
-    	chThdSleep(5);
+    	chThdSleepMilliseconds(10);
+
 
     }
 
@@ -239,6 +241,4 @@ void manage_distance_start(void){
 
 
 
-//        		chprintf((BaseSequentialStream *)&SDU1, "captureprox=%d\n", i);
-//        		chprintf((BaseSequentialStream *)&SDU1, "captureprox=%d\n", get_prox(i));
-//        		chprintf((BaseSequentialStream *)&SDU1, "captureprox=%d\n", left_motor_get_pos());
+
