@@ -211,9 +211,20 @@ static THD_FUNCTION(ManageDistance, arg) {
     chRegSetThreadName(__FUNCTION__);
     (void)arg;
 
-    // systime_t time;
 
-    start_robot();
+
+
+    // systime_t time;
+	left_motor_set_pos (0);
+
+    while(left_motor_get_pos() < 1300){
+    	left_motor_set_speed (200);
+    	right_motor_set_speed (-200);
+    }
+
+    stop_robot();
+
+    /*start_robot();
 
     while(1){
 
@@ -223,10 +234,10 @@ static THD_FUNCTION(ManageDistance, arg) {
     		//color = get_color();
     		//    		// ON A MTN LE SENS DE LA ROTATION, LA COULEUR DE LA CARTE, ET LES MOTORS STEP POUR L'ANGLE AVEC LE MUR
     		//    		//	ON DOIT FAIRE UNE FONCTION QUI CALCULE UN NOUVELLE ANGLE DE ROTATION (EN MOTOR STEP) ET QUI ROTATE LE ROBOT JUSQU'A CELUI CI
-    		//rotate_robot_bounce();
+    		rotate_robot_bounce();
     		//
-    		//start_robot();
-    	}
+    		start_robot();
+    	}*/
     	chThdSleepMilliseconds(10);
 
 
