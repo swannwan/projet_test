@@ -23,7 +23,7 @@
 
 
 
-static int16_t angle_to_camera[8] = {-5, -30, -90, -130, 130, 90, 30, 5} ; // IN MOTOR STEP CA SERAIT MIEUX IL FAUT LE TROUVER EXPERIMENTALEMENT
+static int16_t angle_to_camera[8] = {-5, -30, -90, -130, 130, 90, 30, 5} ; // CHANGE 16 TO 32 IN MOTOR STEP CA SERAIT MIEUX IL FAUT LE TROUVER EXPERIMENTALEMENT
 
 
 
@@ -34,8 +34,8 @@ static int16_t color = BLACK_CARD;
 
 static _Bool rotation_clockwise = false;
 
-static int16_t left_motor_step_to_align = 0; // number of motor until the robot is align to the wall
-static int16_t left_motor_step_to_bounce = 0;// number of motor until the robot is in the right direction after bounce
+static int16_t left_motor_step_to_align = 0; // number of motor until the robot is align to the wall CHANGE 32 TO 16
+static int16_t left_motor_step_to_bounce = 0;// number of motor until the robot is in the right direction after bounce CHANGE 32 TO 16
 
 
 //**********************************************************************
@@ -44,7 +44,7 @@ static int16_t left_motor_step_to_bounce = 0;// number of motor until the robot 
 
 
 // if the proximity sensor found a too close object it give back the value of the angle to camera sensor
-int16_t alert_proximity_sensor(void)
+int16_t alert_proximity_sensor(void) //CHANGE 16 TO 32
 {
 	for (int i = 0 ; i < 8 ; i++)
 	{
@@ -87,7 +87,7 @@ void game_over(void)
 // positive motor_step = clockwise rotation
 // negative motor_step = anti clockwise rotation
 
-void rotate_robot(int16_t left_motor_step)
+void rotate_robot(int16_t left_motor_step) // CHANGE TO 32
 {
 	//	stop the robot before making the rotation
 	stop_robot();
@@ -110,12 +110,12 @@ void rotate_robot(int16_t left_motor_step)
 	if (rotation_clockwise)
 	{
 		while (left_motor_get_pos() < left_motor_step){
-			chThdSleepMilliseconds(10);
+			//chThdSleepMilliseconds(10);
 		}
 	}else
 	{
 		while (left_motor_get_pos() < - left_motor_step){
-			chThdSleepMilliseconds(10);
+			//chThdSleepMilliseconds(10);
 		}
 	}
 //	stop the robot after making the rotation
@@ -124,7 +124,9 @@ void rotate_robot(int16_t left_motor_step)
 }
 
 
-void rotate_robot_until_align (int16_t angle)
+
+
+void rotate_robot_until_align (int16_t angle) //CHANGE TO 32
 {
 	stop_robot();
 
@@ -172,18 +174,20 @@ void rotate_robot_bounce(void)
 
 	// 1ER CONDITION QUI DONNE L'ANGLE POUR UN REBOND PARFAIT
 
-	if (color != BLUE_CARD)
-	{
+//	if (color != BLUE_CARD)
+//	{
+
 		if (left_motor_step_to_align > 0) // SI LA 1ER ROT SE FAIT DANS LE SENS HORAIRE
-			left_motor_step_to_bounce = - MOTOR_STEP_COMPLET_ROTATION/2 + left_motor_step_to_align + color;
+			left_motor_step_to_bounce = - MOTOR_STEP_COMPLET_ROTATION/2 + left_motor_step_to_align; //ADD COLOR
 		else// SI LA 1ER ROT SE FAITR DANS LE SENS ANTIHORAIRE
-			left_motor_step_to_bounce = MOTOR_STEP_COMPLET_ROTATION/2 - left_motor_step_to_align - color;
+			left_motor_step_to_bounce = MOTOR_STEP_COMPLET_ROTATION/2 - left_motor_step_to_align; //ADD COLOR
 
 		rotate_robot(left_motor_step_to_bounce);
 
-	}else{
-		game_over(); //IL FauT CRéER UNE FONCTION de FIN DE JEU
-	}
+
+//	}else{
+//		game_over(); //IL FauT CRéER UNE FONCTION de FIN DE JEU
+//	}
 
 	//rotate_robot(left_motor_step_to_bounce);
 	// CETTE CONDITION REDONNE UN ANGLE EN FONCTION DE LA VUE PAR LE ROBOT
@@ -205,26 +209,19 @@ void rotate_robot_bounce(void)
 //}
 
 
+
 static THD_WORKING_AREA(waManageDistance, 1024);
 static THD_FUNCTION(ManageDistance, arg) {
 
     chRegSetThreadName(__FUNCTION__);
     (void)arg;
 
-
-
-
+    //rotation_360();
     // systime_t time;
-	left_motor_set_pos (0);
 
-    while(left_motor_get_pos() < 1300){
-    	left_motor_set_speed (200);
-    	right_motor_set_speed (-200);
-    }
+    start_robot();
 
-    stop_robot();
 
-    /*start_robot();
 
     while(1){
 
@@ -235,9 +232,12 @@ static THD_FUNCTION(ManageDistance, arg) {
     		//    		// ON A MTN LE SENS DE LA ROTATION, LA COULEUR DE LA CARTE, ET LES MOTORS STEP POUR L'ANGLE AVEC LE MUR
     		//    		//	ON DOIT FAIRE UNE FONCTION QUI CALCULE UN NOUVELLE ANGLE DE ROTATION (EN MOTOR STEP) ET QUI ROTATE LE ROBOT JUSQU'A CELUI CI
     		rotate_robot_bounce();
+
     		//
     		start_robot();
-    	}*/
+    		chThdSleepMilliseconds(1000);
+    	}
+
     	chThdSleepMilliseconds(10);
 
 
@@ -251,5 +251,21 @@ void manage_distance_start(void){
 }
 
 
-
+//void rotation_360(void){
+//
+//	left_motor_set_pos (0);
+//	right_motor_set_pos(0);
+//
+//	while(left_motor_get_pos()< 1300){
+//
+//		//chprintf((BaseSequentialStream *)&SDU1, "MOTOR_POS=%d\n", left_motor_get_pos());
+//		left_motor_set_speed (200);
+//		right_motor_set_speed (-200);
+//
+//
+//	}
+//
+//	stop_robot();
+//
+//}
 
