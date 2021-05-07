@@ -12,17 +12,20 @@
 #include <camera/po8030.h>
 #include <chprintf.h>
 
-#include <pi_regulator.h>
+
 #include <process_image.h>
 #include <manage_distance.h>
 #include <sensors/proximity.h>
 
-void SendUint8ToComputer(uint8_t* data, uint16_t size) 
+//#include <gpio.h> // to verify
+
+
+/*void SendUint8ToComputer(uint8_t* data, uint16_t size) POUR ENVOYER DES INFO SUR LE SCIPT PYTHON
 {
 	chSequentialStreamWrite((BaseSequentialStream *)&SD3, (uint8_t*)"START", 5);
 	chSequentialStreamWrite((BaseSequentialStream *)&SD3, (uint8_t*)&size, sizeof(uint16_t));
 	chSequentialStreamWrite((BaseSequentialStream *)&SD3, (uint8_t*)data, size);
-}
+}*/
 
 static void serial_start(void)
 {
@@ -50,28 +53,24 @@ int main(void)
 
     //starts the serial communication
     serial_start();
-
     //start the USB communication
     usb_start();
-
     //starts the camera
     dcmi_start();
 	po8030_start();
-
 	//initialize the motors
 	motors_init();
-
 	//stars the threads for the pi regulator and the processing of the image
 	messagebus_init(&bus, &bus_lock, &bus_condvar);
 
+	//start the camera
+	process_image_start();
 
-	process_image_start(); //UNCOMMENT
+	//create the proximity thread
 	proximity_start();
 
+	//create the main thread for the movement of the robot
 	manage_distance_start();
-
-	//pi_regulator_start();	UNCOMMENT
-
 
     /* Infinite loop. */
     while (1) {

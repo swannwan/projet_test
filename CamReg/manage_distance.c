@@ -12,143 +12,171 @@
 
 #include <main.h>
 #include <process_image.h>
-
-#define DISTANCE_LIM 				200
-
-#define DISTANCE_LIM_FRNT_SENSOR 	100 // VALUE TO CALIBRATE EXPERIMENTALY
-
-#define MOTOR_STEP_DELTA 			20
-#define MOTOR_STEP_COMPLET_ROTATION	1100
-// constant declaration **************************************************
-
-
-
-static int16_t angle_to_camera[8] = {5, 30, 90, 130, -130, -90, -30, -5} ; // IN MOTOR STEP CA SERAIT MIEUX IL FAUT LE TROUVER EXPERIMENTALEMENT
+#include <leds.h>
 
 
 
 
+#define DISTANCE_LIM 				500	// minimal distance between the robot sensor and the wall
+
+#define DISTANCE_LIM_FRNT_SENSOR 	400 // VALUE TO CALIBRATE EXPERIMENTALY
+#define DISTANCE_DIFF_FRNT_SENSOR 	50 	// distance difference between the two front sensor
+
+//#define MOTOR_STEP_COMPLET_ROTATION	1300
+#define MOTOR_STEP_180_ROTATION	650
+#define MOTOR_STEP_95_ROTATION 	343
+
+#define ROBOT_SPEED				400 // speed of the robot in [step/s]
+#define ROBOT_ROTATION_SPEED	200
 
 
-static int16_t color = BLACK_CARD;
+// constant declaration *********************************************************************************************
 
-static _Bool rotation_clockwise = false;
-
-static int16_t left_motor_step_to_align = 0; // number of motor until the robot is align to the wall
-static int16_t left_motor_step_to_bounce = 0;// number of motor until the robot is in the right direction after bounce
+//table that tells us if the sensor is right or left
+static _Bool sensor_direction[8] = {1, 1, 1, 1, 0, 0, 0, 0} ; // 1 for the right sensor 0 for the left sensor
 
 
-//**********************************************************************
+//******************************************************************************************************************
 
-
-
-
-// if the proximity sensor found a too close object it give back the value of the angle to camera sensor
-int16_t alert_proximity_sensor(void)
+// if the proximity sensor found a too close object it give back the number of the IR sensor who detected it
+uint8_t alert_proximity_sensor(void)
 {
 	for (int i = 0 ; i < 8 ; i++)
 	{
-		if (get_prox(i) > DISTANCE_LIM && (i != 3 || i !=4)) // NE PREND QUE LES CAPTEURS DE DEVANT
-			return angle_to_camera[i];
+		if (get_prox(i) > DISTANCE_LIM && i != 3 && i !=4) // NE PREND QUE LES CAPTEURS DE DEVANT
+			return i+1; // +1 because we don't want it to return 0
 	}
 	return 0;
 }
 
 
+// set the robot speed to zero
 void stop_robot (void)
 {
 	left_motor_set_speed (0);
 	right_motor_set_speed (0);
 }
 
+
+// set the robot speed to a constant value
 void start_robot(void)
 {
 	left_motor_set_speed (ROBOT_SPEED);
 	right_motor_set_speed (ROBOT_SPEED);
 }
 
+void right_rotation (void)
+{
+	left_motor_set_speed (ROBOT_ROTATION_SPEED);
+	right_motor_set_speed (-ROBOT_ROTATION_SPEED);
+}
+
+void left_rotation (void)
+{
+	left_motor_set_speed (-ROBOT_ROTATION_SPEED);
+	right_motor_set_speed (ROBOT_ROTATION_SPEED);
+}
+
+// function for the end of the game
 void game_over(void)
 {
 	stop_robot();
 	systime_t time;
-	time = chVTGetSystemTime();
+	systime_t time_led;
+	_Bool toggle_led = 0;
 
-	while (time +  MS2ST(10000) < chVTGetSystemTime()) // !!!!!!!!!!! PAS SUR QUE CETTE FOCNITON SOIT JUSTE
-														// FAIT TOURNER LE ROBOT SUR LUI MEME PENDANT 10 SECONDE
+	time = chVTGetSystemTime();
+	while (time +  MS2ST(10000) > chVTGetSystemTime()) // !!!!!!!!!!! PAS SUR QUE CETTE FOCNITON SOIT JUSTE FAIT TOURNER LE ROBOT SUR LUI MEME PENDANT 10 SECONDE
 	{
-		left_motor_set_speed (200);
-		right_motor_set_speed (-200);
+
+		time_led = chVTGetSystemTime();
+
+		while (time_led +  MS2ST(500) > chVTGetSystemTime())
+		{
+			if (toggle_led)
+			{
+				for(int i=0; i<4; i++) {
+					set_led(i, 2);
+				}
+				right_rotation();
+			}
+			else
+			{
+				for(int i=0; i<4; i++) {
+					set_led(i, 0);
+				}
+				stop_robot();
+			}
+		}
+		toggle_led = !(toggle_led);
+	}
+	stop_robot();
+
+	for(int i=0; i<4; i++) {
+		set_led(i, 0);
 	}
 	stop_robot();
 }
 
 
 // rotate the robot with motor step
-// positive motor_step = clockwise rotation
-// negative motor_step = anti clockwise rotation
-
-void rotate_robot(int16_t left_motor_step)
+void rotate_robot(int32_t left_motor_step)
 {
-	//	stop the robot before making the rotation
+	//if left_motor_step > 0  => clockwise rotation
+	//if left_motor_step < 0  => counterclockwise rotation
+
+	//stop the robot before making the rotation
 	stop_robot();
-	// initiate  robot position counter
+
+	//initiate  robot position counter
 	left_motor_set_pos (0);
 	right_motor_set_pos(0);
-	// the rotation depends direction depends on the angle given
+
+
+	//the rotation depends direction depends on the angle given
+	if (left_motor_step > 0)
+		right_rotation();
+	else
+		left_rotation();
+
+	//get motor position in uint32 so we need angle in uint32
 	if (left_motor_step > 0)
 	{
-		rotation_clockwise = true;
-		left_motor_set_speed (200);
-		right_motor_set_speed (-200);
+		// waiting loop
+		while (left_motor_get_pos() < left_motor_step)
+			chThdSleepMilliseconds(10);
 	}else
 	{
-		rotation_clockwise = false;
-		left_motor_set_speed (-200);
-		right_motor_set_speed (200);
+		// waiting loop
+		while (left_motor_get_pos() > left_motor_step)
+			chThdSleepMilliseconds(10);
 	}
-//	get motor position in uint32 so we need angle in uint32
-	if (rotation_clockwise)
-	{
-		while (left_motor_get_pos() < left_motor_step){
-			chThdSleep(5);
-		}
-	}else
-	{
-		while (left_motor_get_pos() < - left_motor_step){
-			chThdSleep(5);
-		}
-	}
-//	stop the robot after making the rotation
+	//stop the robot after making the rotation
 	stop_robot();
 
 }
 
-
-void rotate_robot_until_align (int16_t angle)
+// function that
+int32_t rotate_robot_until_align (_Bool direction) // direction = 1 for a right turn , = 0 for a left turn
 {
+
 	stop_robot();
-
-
+	// create variable
+	int32_t left_motor_step_to_align =0;
+	// set the motor position counter to zero
 	left_motor_set_pos (0);
-	right_motor_set_pos(0);
 
-	// the rotation depends direction depends on the angle given
-	if (angle < 0)
-	{
-		rotation_clockwise = true;
-		left_motor_set_speed (200);
-		right_motor_set_speed (-200);
-	}else
-	{
-		rotation_clockwise = false;
-		left_motor_set_speed (-200);
-		right_motor_set_speed (200);
-	}
 
-	//	get motor position in uint32 so we need angle in uint32
-	while (get_prox(0) < DISTANCE_LIM_FRNT_SENSOR  && get_prox(7) < DISTANCE_LIM_FRNT_SENSOR )
+	// rotate robot
+	if (direction)
+		right_rotation();
+	else
+		left_rotation();
+
+	//	condition of alignment
+	while (get_prox(0) < DISTANCE_LIM_FRNT_SENSOR || abs(get_prox(7) - get_prox(0)) > DISTANCE_DIFF_FRNT_SENSOR)
 	{
-		chThdSleep(5);
+		chThdSleepMilliseconds(10);
 	}
 
 	left_motor_step_to_align = left_motor_get_pos();
@@ -156,54 +184,42 @@ void rotate_robot_until_align (int16_t angle)
 	//	stop the robot after making the rotation
 	stop_robot();
 
+	return left_motor_step_to_align;
 }
 
-void rotate_robot_bounce(void)
+void rotate_robot_bounce(int32_t left_motor_step_to_align, int32_t left_motor_step_to_bounce, int16_t color)
 {
 	//	stop the robot before making the rotation
 	stop_robot();
 	// initiate  robot position counter
 	left_motor_set_pos (0);
-	right_motor_set_pos(0);
+
 	// the rotation direction depends on the angle given
 
-
-	// 1ER CONDITION QUI DONNE L'ANGLE POUR UN REBOND PARFAIT
-
-	if (color != BLUE_CARD)
-	{
-		if (left_motor_step_to_align > 0) // SI LA 1ER ROT SE FAIT DANS LE SENS HORAIRE
-			left_motor_step_to_bounce = - MOTOR_STEP_COMPLET_ROTATION/2 + left_motor_step_to_align + color;
-		else// SI LA 1ER ROT SE FAITR DANS LE SENS ANTIHORAIRE
-			left_motor_step_to_bounce = MOTOR_STEP_COMPLET_ROTATION/2 - left_motor_step_to_align - color;
-
-		rotate_robot(left_motor_step_to_bounce);
-
-	}else{
-		game_over(); //IL FauT CRéER UNE FONCTION de FIN DE JEU
+	// find the motor step for a perfect bounce (like reflection)
+	if (left_motor_step_to_align > 0)
+	{ 	// if the 1st rotation clockwise
+		left_motor_step_to_bounce = - MOTOR_STEP_180_ROTATION + left_motor_step_to_align  + (int32_t)color ;
+			if (left_motor_step_to_bounce > -MOTOR_STEP_95_ROTATION)
+				left_motor_step_to_bounce = -MOTOR_STEP_95_ROTATION; // condition to be sure the robot don't drive into wall (this can be caused by the card color)
+	}
+	else
+	{								// if the 1st rotation counterclockwise
+		left_motor_step_to_bounce = MOTOR_STEP_180_ROTATION + left_motor_step_to_align - (int32_t)color ;
+			if (left_motor_step_to_bounce < MOTOR_STEP_95_ROTATION)
+				left_motor_step_to_bounce = MOTOR_STEP_95_ROTATION; // condition to be sure the robot don't drive into wall
 	}
 
-	//rotate_robot(left_motor_step_to_bounce);
-	// CETTE CONDITION REDONNE UN ANGLE EN FONCTION DE LA VUE PAR LE ROBOT
-		//	switch (get_color()){	​
-		//	    case RED_CARD:
-		//	      break;
-		//	}
+	rotate_robot(left_motor_step_to_bounce);
 
-	// CALCUL LES MOTORS STEP POUR REMETTRE LE ROBOT DANS LE BON ANGLE
-
-	//	get motor position in uint32 so we need angle in uint32
 	//	stop the robot after making the rotation
 	stop_robot();
 }
 
-//int32_t angle_into_motor_step (int16_t angle)
-//{
-//	return angle_convertion;
-//}
 
 
-static THD_WORKING_AREA(waManageDistance, 256);
+
+static THD_WORKING_AREA(waManageDistance, 1024);
 static THD_FUNCTION(ManageDistance, arg) {
 
     chRegSetThreadName(__FUNCTION__);
@@ -211,23 +227,40 @@ static THD_FUNCTION(ManageDistance, arg) {
 
     // systime_t time;
 
+    // number of the sensor (1 to 8)
+
+    uint8_t sensor_number = 0;
+    int16_t card_color = BLACK_CARD;
+
+    // variables for the rotations
+    int32_t first_rotation = 0; // number of motor step (for the left motor) until the robot is align to the wall
+    int32_t second_rotation = 0;// number of motor step (for the left motor) until the robot is in the right direction after bounce
+
     start_robot();
+
+
+//  playMelody(PIRATES_OF_THE_CARIBBEAN, ML_FORCE_CHANGE, 0); MELODY PAS POSSIBLE D'UTILISATION
+//	playMelodyStart();
+
 
     while(1){
 
-    	if (alert_proximity_sensor()) // alert proximity return an angle
+    	sensor_number = alert_proximity_sensor();
+
+    	if (sensor_number) // if sensor_number = 0 there is no obstacle near
     	{
-    		rotate_robot_until_align(alert_proximity_sensor());
-    		color = get_color();
-    		// ON A MTN LE SENS DE LA ROTATION, LA COULEUR DE LA CARTE, ET LES MOTORS STEP POUR L'ANGLE AVEC LE MUR
-    		//	ON DOIT FAIRE UNE FONCTION QUI CALCULE UN NOUVELLE ANGLE DE ROTATION (EN MOTOR STEP) ET QUI ROTATE LE ROBOT JUSQU'A CELUI CI
-    		rotate_robot_bounce();
+    		first_rotation = rotate_robot_until_align(sensor_direction[sensor_number]);
 
+    		card_color = get_color();
+
+    		if (card_color == BLUE_CARD)
+    			game_over();
+    		else
+    			rotate_robot_bounce(first_rotation, second_rotation, card_color); // ADD CARD_COLOR
     		start_robot();
-
+    		chThdSleepMilliseconds(400);
     	}
-    	chThdSleep(5);
-
+    	chThdSleepMilliseconds(10);
     }
 
 }
@@ -236,9 +269,3 @@ static THD_FUNCTION(ManageDistance, arg) {
 void manage_distance_start(void){
 	chThdCreateStatic(waManageDistance, sizeof(waManageDistance), NORMALPRIO, ManageDistance, NULL);
 }
-
-
-
-//        		chprintf((BaseSequentialStream *)&SDU1, "captureprox=%d\n", i);
-//        		chprintf((BaseSequentialStream *)&SDU1, "captureprox=%d\n", get_prox(i));
-//        		chprintf((BaseSequentialStream *)&SDU1, "captureprox=%d\n", left_motor_get_pos());
