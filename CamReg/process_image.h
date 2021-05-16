@@ -3,12 +3,7 @@
 
 
 
-//**** add for project
-
 int16_t get_color(void);
-
-
-//****
 
 
 void process_image_start(void);
